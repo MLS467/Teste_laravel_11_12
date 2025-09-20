@@ -17,6 +17,7 @@ it('display the login page when not logget in', function () {
 });
 
 
+
 it("Forgot password", function () {
     $result = $this->get('/forgot-password');
 
