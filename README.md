@@ -1,66 +1,294 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistema de Gestão de RH
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Um sistema de gestão de recursos humanos desenvolvido com Laravel 11, utilizando Laravel Fortify para autenticação e PestPHP para testes.
 
-## About Laravel
+## 📋 Índice
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+-   [Tecnologias Utilizadas](#tecnologias-utilizadas)
+-   [Funcionalidades](#funcionalidades)
+-   [Estrutura do Projeto](#estrutura-do-projeto)
+-   [Sistema de Autenticação](#sistema-de-autenticação)
+-   [Instalação](#instalação)
+-   [Testes](#testes)
+-   [Rotas Principais](#rotas-principais)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 🚀 Tecnologias Utilizadas
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+-   **PHP**: ^8.2
+-   **Laravel Framework**: ^11.9
+-   **Laravel Fortify**: ^1.21 (Autenticação)
+-   **PestPHP**: ^3.7 (Testes)
+-   **Bootstrap**: Frontend
+-   **DataTables**: Manipulação de tabelas
+-   **FontAwesome**: Ícones
 
-## Learning Laravel
+## ✨ Funcionalidades
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Sistema de Autenticação
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+-   Login de usuários
+-   Recuperação de senha
+-   Confirmação de conta via email
+-   Middleware de autenticação
+-   Sistema de roles e permissões
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### Gestão de Usuários
 
-## Laravel Sponsors
+-   Cadastro de colaboradores
+-   Perfis de usuário
+-   Departamentos
+-   Administração do sistema
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## 📁 Estrutura do Projeto
 
-### Premium Partners
+```
+rh_mangnt/
+├── app/
+│   ├── Http/Controllers/        # Controladores da aplicação
+│   ├── Models/                  # Modelos Eloquent
+│   │   ├── User.php            # Modelo de usuário
+│   │   ├── UserDetail.php      # Detalhes do usuário
+│   │   └── Department.php      # Departamentos
+│   ├── Mail/                   # Classes de email
+│   └── Providers/              # Service Providers
+├── database/
+│   ├── migrations/             # Migrações do banco
+│   └── seeders/               # Seeders
+├── tests/
+│   └── Feature/
+│       └── AuthTest.php       # Testes de autenticação
+└── resources/views/           # Views Blade
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+## 🔐 Sistema de Autenticação
 
-## Contributing
+O sistema utiliza Laravel Fortify para gerenciar autenticação. Baseado nos testes implementados, as seguintes funcionalidades foram validadas:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Fluxo de Login
 
-## Code of Conduct
+#### 1. Redirecionamento para Login
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+-   **Comportamento**: Usuários não autenticados são redirecionados para `/login`
+-   **Status HTTP**: 302 (Redirect)
+-   **Teste**: Verifica se usuários não logados são redirecionados corretamente
 
-## Security Vulnerabilities
+```php
+// Teste implementado
+it('display the login page when not logget in', function () {
+    $result = $this->get('/')->assertRedirect("/login");
+    expect($result->status())->toBe(302);
+    expect($this->get('/login')->status())->toBe(200);
+    expect($this->get('/login')->content())->toContain("Esqueceu a sua senha?");
+});
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+#### 2. Página de Login
 
-## License
+-   **Rota**: `/login`
+-   **Status HTTP**: 200 (OK)
+-   **Elementos**: Contém link "Esqueceu a sua senha?"
+-   **Funcionalidade**: Formulário de autenticação
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+#### 3. Recuperação de Senha
+
+-   **Rota**: `/forgot-password`
+-   **Status HTTP**: 200 (OK)
+-   **Elementos**: Contém link "Já sei a minha senha?"
+-   **Funcionalidade**: Formulário para recuperação de senha
+
+```php
+// Teste implementado
+it("Forgot password", function () {
+    $result = $this->get('/forgot-password');
+    expect($result->status())->toBe(200);
+    expect($result->content())->toContain("Já sei a minha senha?");
+});
+```
+
+#### 4. Autenticação de Administrador
+
+-   **Credenciais de Teste**:
+
+    -   Email: `admin@rhmangnt.com`
+    -   Senha: `Aa123456`
+    -   Role: `admin`
+    -   Permissões: `["admin"]`
+
+-   **Fluxo de Login**:
+    1. POST para `/login` com credenciais
+    2. Redirecionamento (302) para `/home`
+    3. Acesso autorizado ao sistema
+
+```php
+// Teste implementado
+it('testing if an admin user can login with success', function () {
+    // Criação do usuário admin
+    User::insert([
+        'department_id' => 1,
+        'name' => 'Administrador',
+        'email' => 'admin@rhmangnt.com',
+        'email_verified_at' => now(),
+        'password' => bcrypt('Aa123456'),
+        'role' => 'admin',
+        'permissions' => '["admin"]',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // Teste de login
+    $result = $this->post('/login', [
+        'email' => 'admin@rhmangnt.com',
+        'password' => 'Aa123456'
+    ]);
+
+    expect($result->status())->toBe(302);
+    expect($result->assertRedirect('/home'));
+});
+```
+
+### Estrutura do Usuário
+
+O modelo `User` possui os seguintes campos principais:
+
+-   `department_id`: ID do departamento
+-   `name`: Nome completo
+-   `email`: Email (único)
+-   `email_verified_at`: Data de verificação do email
+-   `password`: Senha criptografada
+-   `role`: Função do usuário (admin, user, etc.)
+-   `permissions`: Permissões em formato JSON
+-   `remember_token`: Token para "lembrar de mim"
+-   `confirmation_token`: Token para confirmação de conta
+
+## 🛠️ Instalação
+
+1. **Clone o repositório**:
+
+```bash
+git clone <repository-url>
+cd rh_mangnt
+```
+
+2. **Instale as dependências**:
+
+```bash
+composer install
+npm install
+```
+
+3. **Configure o ambiente**:
+
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+4. **Configure o banco de dados** no arquivo `.env`
+
+5. **Execute as migrações**:
+
+```bash
+php artisan migrate
+```
+
+6. **Execute os seeders** (se necessário):
+
+```bash
+php artisan db:seed
+```
+
+7. **Compile os assets**:
+
+```bash
+npm run dev
+```
+
+8. **Inicie o servidor**:
+
+```bash
+php artisan serve
+```
+
+## 🧪 Testes
+
+O projeto utiliza PestPHP para testes. Os testes estão localizados em `tests/Feature/AuthTest.php`.
+
+### Executar Testes
+
+```bash
+# Executar todos os testes
+./vendor/bin/pest
+
+# Executar testes específicos de autenticação
+./vendor/bin/pest tests/Feature/AuthTest.php
+
+# Executar com coverage (se configurado)
+./vendor/bin/pest --coverage
+```
+
+### Testes Implementados
+
+#### Testes de Autenticação (`AuthTest.php`)
+
+1. **Teste de Redirecionamento**: Verifica se usuários não autenticados são redirecionados para login
+2. **Teste de Página de Recuperação**: Valida a funcionalidade de esqueci minha senha
+3. **Teste de Login de Admin**: Confirma que usuários administradores podem fazer login com sucesso
+
+### Cenários de Teste Cobertos
+
+-   ✅ Redirecionamento de usuários não autenticados
+-   ✅ Exibição correta da página de login
+-   ✅ Funcionalidade de recuperação de senha
+-   ✅ Login bem-sucedido de usuário administrador
+-   ✅ Redirecionamento pós-login para home
+
+## 🔗 Rotas Principais
+
+### Rotas Públicas (Guest)
+
+-   `GET /login` - Página de login
+-   `GET /forgot-password` - Recuperação de senha
+-   `GET /confirm-account/{token}` - Confirmação de conta
+-   `POST /confirm-account` - Processamento da confirmação
+
+### Rotas Autenticadas
+
+-   `GET /home` - Dashboard principal
+-   `GET /` - Redirecionamento para login (se não autenticado)
+
+### Middleware
+
+-   `guest` - Para usuários não autenticados
+-   `auth` - Para usuários autenticados
+
+## 📧 Sistema de Email
+
+O sistema inclui funcionalidades de email para:
+
+-   Confirmação de conta (`ConfirmAccountEmail.php`)
+-   Recuperação de senha
+-   Notificações do sistema
+
+## 🔒 Segurança
+
+-   Senhas criptografadas com bcrypt
+-   Tokens de confirmação para novos usuários
+-   Sistema de roles e permissões
+-   Middleware de autenticação
+-   Validação de email antes do acesso
+
+## 📝 Contribuição
+
+1. Fork o projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+
+---
+
+**Sistema de Gestão de RH** - Desenvolvido com Laravel 11 e PestPHP
