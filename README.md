@@ -120,9 +120,22 @@ it("Forgot password", function () {
     3. Acesso autorizado ao sistema
 
 ```php
-// Teste implementado
+// Teste implementado (refatorado com função auxiliar)
 it('testing if an admin user can login with success', function () {
-    // Criação do usuário admin
+    addAdminUser(); // Utiliza função auxiliar para criar usuário
+
+    // Teste de login
+    $result = $this->post('/login', [
+        'email' => 'admin@rhmangnt.com',
+        'password' => 'Aa123456'
+    ]);
+
+    expect($result->status())->toBe(302);
+    expect($result->assertRedirect('/home'));
+});
+
+// Função auxiliar para criação de usuário administrador
+function addAdminUser() {
     User::insert([
         'department_id' => 1,
         'name' => 'Administrador',
@@ -134,16 +147,7 @@ it('testing if an admin user can login with success', function () {
         'created_at' => now(),
         'updated_at' => now(),
     ]);
-
-    // Teste de login
-    $result = $this->post('/login', [
-        'email' => 'admin@rhmangnt.com',
-        'password' => 'Aa123456'
-    ]);
-
-    expect($result->status())->toBe(302);
-    expect($result->assertRedirect('/home'));
-});
+}
 ```
 
 ### Estrutura do Usuário
@@ -233,6 +237,42 @@ O projeto utiliza PestPHP para testes. Os testes estão localizados em `tests/Fe
 1. **Teste de Redirecionamento**: Verifica se usuários não autenticados são redirecionados para login
 2. **Teste de Página de Recuperação**: Valida a funcionalidade de esqueci minha senha
 3. **Teste de Login de Admin**: Confirma que usuários administradores podem fazer login com sucesso
+
+#### Funções Auxiliares nos Testes
+
+Para melhorar a organização e reutilização de código nos testes, foram implementadas funções auxiliares:
+
+**`addAdminUser()`**: Função auxiliar para criação de usuário administrador
+
+-   **Propósito**: Centralizar a criação de usuários admin para testes
+-   **Benefícios**:
+    -   Reduz duplicação de código
+    -   Facilita manutenção dos testes
+    -   Padroniza dados de teste
+    -   Melhora legibilidade dos testes
+
+```php
+function addAdminUser() {
+    User::insert([
+        'department_id' => 1,
+        'name' => 'Administrador',
+        'email' => 'admin@rhmangnt.com',
+        'email_verified_at' => now(),
+        'password' => bcrypt('Aa123456'),
+        'role' => 'admin',
+        'permissions' => '["admin"]',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
+```
+
+**Vantagens da Refatoração**:
+
+-   ✅ Código mais limpo e organizado
+-   ✅ Reutilização em múltiplos testes
+-   ✅ Facilita futuras modificações nos dados de teste
+-   ✅ Melhor manutenibilidade do código de teste
 
 ### Cenários de Teste Cobertos
 

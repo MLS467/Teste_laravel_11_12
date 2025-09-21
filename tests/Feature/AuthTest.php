@@ -29,18 +29,7 @@ it("Forgot password", function () {
 
 it('testing if an admin user can login with success', function () {
 
-    // cria o usuário no banco de dados em memória
-    User::insert([
-        'department_id' => 1,
-        'name' => 'Administrador',
-        'email' => 'admin@rhmangnt.com',
-        'email_verified_at' => now(),
-        'password' => bcrypt('Aa123456'),
-        'role' => 'admin',
-        'permissions' => '["admin"]',
-        'created_at' => now(),
-        'updated_at' => now(),
-    ]);
+    addAdminUser();
 
     // testando se faz o login
     $result = $this->post(
@@ -57,3 +46,20 @@ it('testing if an admin user can login with success', function () {
     // testando se o redirecionamento chegou home com cod 200 ok
     expect($result->assertRedirect('/home'));
 });
+
+
+function addAdminUser()
+{
+    // cria o usuário no banco de dados em memória
+    User::insert([
+        'department_id' => 1,
+        'name' => 'Administrador',
+        'email' => 'admin@rhmangnt.com',
+        'email_verified_at' => now(),
+        'password' => bcrypt('Aa123456'),
+        'role' => 'admin',
+        'permissions' => '["admin"]',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
