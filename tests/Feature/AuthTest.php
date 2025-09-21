@@ -17,7 +17,6 @@ it('display the login page when not logget in', function () {
     expect($this->get('/login')->content())->toContain("Esqueceu a sua senha?");
 });
 
-
 it("Forgot password", function () {
     $result = $this->get('/forgot-password');
 
@@ -25,7 +24,6 @@ it("Forgot password", function () {
 
     expect($result->content())->toContain("Já sei a minha senha?");
 });
-
 
 it('testing if an admin user can login with success', function () {
 
@@ -48,6 +46,30 @@ it('testing if an admin user can login with success', function () {
 });
 
 
+it('testing if an rh user can login in Admin route', function () {
+
+    addRHUser();
+
+    // testando se faz o login
+    $result = $this->post(
+        '/login',
+        [
+            'email' => 'admin1@rhmangnt.com',
+            'password' => 'Aa123456'
+        ]
+    );
+
+    // testando se houve redirecionamento cod 302 redirect
+    expect($result->status())->toBe(302);
+
+    // todas as rotas após login são redirecionadas para o home
+    expect($result->assertRedirect('/home'));
+
+    // testando se o redirecionamento chegou home com cod 200 ok
+    expect($this->get('rh-users/management/home')->status())->toBe(200);
+});
+
+
 function addAdminUser()
 {
     // cria o usuário no banco de dados em memória
@@ -58,6 +80,21 @@ function addAdminUser()
         'email_verified_at' => now(),
         'password' => bcrypt('Aa123456'),
         'role' => 'admin',
+        'permissions' => '["admin"]',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
+function addRHUser()
+{
+    // cria o usuário no banco de dados em memória
+    User::insert([
+        'department_id' => 2,
+        'name' => 'Administrador',
+        'email' => 'admin1@rhmangnt.com',
+        'email_verified_at' => now(),
+        'password' => bcrypt('Aa123456'),
+        'role' => 'rh',
         'permissions' => '["admin"]',
         'created_at' => now(),
         'updated_at' => now(),

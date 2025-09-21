@@ -237,6 +237,7 @@ O projeto utiliza PestPHP para testes. Os testes estão localizados em `tests/Fe
 1. **Teste de Redirecionamento**: Verifica se usuários não autenticados são redirecionados para login
 2. **Teste de Página de Recuperação**: Valida a funcionalidade de esqueci minha senha
 3. **Teste de Login de Admin**: Confirma que usuários administradores podem fazer login com sucesso
+4. **Teste de Login de Usuário RH**: Valida login de usuários RH e acesso a rotas específicas
 
 #### Funções Auxiliares nos Testes
 
@@ -274,13 +275,113 @@ function addAdminUser() {
 -   ✅ Facilita futuras modificações nos dados de teste
 -   ✅ Melhor manutenibilidade do código de teste
 
+#### Sistema de Sessões nos Testes
+
+**`addRHUser()`**: Função auxiliar para criação de usuário RH
+
+-   **Propósito**: Criar usuários com role 'rh' para testes de autorização
+-   **Department ID**: 2 (diferente do admin)
+-   **Email**: admin1@rhmangnt.com
+
+```php
+function addRHUser() {
+    User::insert([
+        'department_id' => 2,
+        'name' => 'Administrador',
+        'email' => 'admin1@rhmangnt.com',
+        'email_verified_at' => now(),
+        'password' => bcrypt('Aa123456'),
+        'role' => 'rh',
+        'permissions' => '["admin"]',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
+```
+
+### Comportamento de Autenticação e Sessões
+
+#### Fluxo de Login Padrão
+
+**Importante**: Independente do role do usuário (admin, rh, etc.), **todos os logins são redirecionados para `/home`** após a autenticação bem-sucedida. A partir do `/home`, a aplicação faz o roteamento interno baseado no role do usuário.
+
+**Comportamento do Sistema:**
+
+1. **Login bem-sucedido** → Redirect HTTP 302 para `/home`
+2. **Página Home** → Avalia o role do usuário
+3. **Roteamento interno** → Direciona para a área específica do role
+4. **Área específica** → Status 200 (acesso permitido)
+
+#### Como funciona a persistência de sessão nos testes:
+
+```php
+it('testing if an rh user can login in Admin route', function () {
+    addRHUser(); // Cria usuário RH no banco de teste
+
+    // 1. Faz login - autentica o usuário na sessão
+    $result = $this->post('/login', [
+        'email' => 'admin1@rhmangnt.com',
+        'password' => 'Aa123456'
+    ]);
+
+    // 2. Verifica redirect HTTP após login (302)
+    expect($result->status())->toBe(302);
+    expect($result->assertRedirect('/home'));
+
+    // 3. A sessão está MANTIDA - pode acessar rotas protegidas
+    expect($this->get('rh-users/management/home')->status())->toBe(200);
+});
+```
+
+#### Características importantes da sessão em testes:
+
+| Aspecto              | Comportamento                | Explicação                                     |
+| -------------------- | ---------------------------- | ---------------------------------------------- |
+| **Persistência**     | ✅ Mantida entre requisições | O framework preserva o estado de autenticação  |
+| **Escopo**           | 🎯 Por teste individual      | Cada `it()` tem sua própria sessão isolada     |
+| **Autenticação**     | 🔐 Válida após POST `/login` | Login bem-sucedido autentica para todo o teste |
+| **Rotas protegidas** | 🛡️ Acessíveis após login     | Middleware de auth reconhece a sessão ativa    |
+
+#### Diferença entre Redirects:
+
+```php
+// ❌ REDIRECT HTTP - Gera status 302
+$this->post('/login', $credentials)
+    ->assertStatus(302)           // Redirect HTTP
+    ->assertRedirect('/home');    // Destino do redirect
+
+// ✅ ACESSO DIRETO - Gera status 200
+$this->get('rh-users/management/home')
+    ->assertStatus(200);          // Acesso bem-sucedido (sessão ativa)
+```
+
+#### Tipos de Usuário nos Testes:
+
+**Admin User:**
+
+-   **Email:** `admin@rhmangnt.com`
+-   **Role:** `admin`
+-   **Department ID:** `1`
+-   **Acesso:** Todas as áreas administrativas
+
+**RH User:**
+
+-   **Email:** `admin1@rhmangnt.com`
+-   **Role:** `rh`
+-   **Department ID:** `2`
+-   **Acesso:** `rh-users/management/home` e áreas de RH
+
 ### Cenários de Teste Cobertos
 
 -   ✅ Redirecionamento de usuários não autenticados
 -   ✅ Exibição correta da página de login
 -   ✅ Funcionalidade de recuperação de senha
 -   ✅ Login bem-sucedido de usuário administrador
--   ✅ Redirecionamento pós-login para home
+-   ✅ Login bem-sucedido de usuário RH
+-   ✅ Redirecionamento pós-login para home (todos os roles)
+-   ✅ Acesso a rotas protegidas após autenticação
+-   ✅ Persistência de sessão entre requisições no teste
+-   ✅ Validação de diferentes tipos de usuário (admin/rh)
 
 ## 🔗 Rotas Principais
 
