@@ -238,6 +238,7 @@ O projeto utiliza PestPHP para testes. Os testes estão localizados em `tests/Fe
 2. **Teste de Página de Recuperação**: Valida a funcionalidade de esqueci minha senha
 3. **Teste de Login de Admin**: Confirma que usuários administradores podem fazer login com sucesso
 4. **Teste de Login de Usuário RH**: Valida login de usuários RH e acesso a rotas específicas
+5. **Teste de Autorização Negativa**: Verifica que colaboradores **NÃO** têm acesso a rotas de RH
 
 #### Funções Auxiliares nos Testes
 
@@ -293,6 +294,29 @@ function addRHUser() {
         'password' => bcrypt('Aa123456'),
         'role' => 'rh',
         'permissions' => '["admin"]',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
+```
+
+**`addCollaborator()`**: Função auxiliar para criação de colaborador
+
+-   **Propósito**: Criar usuários com role 'collaborator' para testes de autorização negativa
+-   **Department ID**: 1 (mesmo que admin, mas role diferente)
+-   **Email**: worker@rhmangnt.com
+-   **Uso**: Validar que colaboradores não têm acesso a áreas administrativas
+
+```php
+function addCollaborator() {
+    User::insert([
+        'department_id' => 1,
+        'name' => 'collaborator',
+        'email' => 'worker@rhmangnt.com',
+        'email_verified_at' => now(),
+        'password' => bcrypt('Aa123456'),
+        'role' => 'collaborator',
+        'permissions' => '["colaborator"]',
         'created_at' => now(),
         'updated_at' => now(),
     ]);
@@ -355,6 +379,55 @@ $this->get('rh-users/management/home')
     ->assertStatus(200);          // Acesso bem-sucedido (sessão ativa)
 ```
 
+#### Testes de Autorização Negativa (usando `not()`)
+
+Para garantir que o sistema de autorização funciona corretamente, implementamos **testes negativos** que verificam quando usuários **NÃO** devem ter acesso a determinadas rotas.
+
+**Exemplo: Colaborador tentando acessar área de RH**
+
+```php
+it('Testing if a collaborator can go to the home route.', function () {
+    addCollaborator(); // Cria usuário collaborator
+
+    // 1. Login bem-sucedido (colaborador pode se autenticar)
+    $result = $this->post('/login', [
+        'email' => 'worker@rhmangnt.com',
+        'password' => 'Aa123456'
+    ]);
+
+    expect($result->status())->toBe(302);
+    expect($result->assertRedirect('home'));
+
+    // 2. TESTE NEGATIVO: Colaborador NÃO deve ter acesso à área de RH
+    expect($this->get('rh-users/management/home')->status())
+        ->not()->toBe(200); // Usando not() para assertiva negativa
+});
+```
+
+#### Vantagens dos Testes Negativos:
+
+| Benefício          | Explicação                                              |
+| ------------------ | ------------------------------------------------------- |
+| **Segurança**      | ✅ Garante que usuários não têm acesso indevido         |
+| **Autorização**    | 🔐 Valida que roles e permissões funcionam corretamente |
+| **Cobertura**      | 📊 Testa tanto cenários positivos quanto negativos      |
+| **Confiabilidade** | 🛡️ Confirma que o sistema bloqueia acessos inadequados  |
+
+#### Sintaxe do `not()` no PestPHP:
+
+```php
+// ✅ Teste positivo
+expect($status)->toBe(200);
+
+// ❌ Teste negativo usando not()
+expect($status)->not()->toBe(200);
+
+// Equivale a verificar que o status NÃO é 200
+// Pode ser 403 (Forbidden), 404 (Not Found), etc.
+```
+
+**Importante**: O teste negativo com `not()->toBe(200)` verifica que o acesso foi **negado**, mas não especifica o código exato (403, 404, 401, etc.). Isso é útil quando queremos apenas confirmar que o acesso foi bloqueado, independente do tipo específico de erro retornado.
+
 #### Tipos de Usuário nos Testes:
 
 **Admin User:**
@@ -371,6 +444,14 @@ $this->get('rh-users/management/home')
 -   **Department ID:** `2`
 -   **Acesso:** `rh-users/management/home` e áreas de RH
 
+**Collaborator User:**
+
+-   **Email:** `worker@rhmangnt.com`
+-   **Role:** `collaborator`
+-   **Department ID:** `1`
+-   **Acesso:** Limitado - **NÃO** tem acesso a áreas de RH ou admin
+-   **Uso nos testes:** Validação de autorização negativa
+
 ### Cenários de Teste Cobertos
 
 -   ✅ Redirecionamento de usuários não autenticados
@@ -378,10 +459,13 @@ $this->get('rh-users/management/home')
 -   ✅ Funcionalidade de recuperação de senha
 -   ✅ Login bem-sucedido de usuário administrador
 -   ✅ Login bem-sucedido de usuário RH
+-   ✅ Login bem-sucedido de colaborador
 -   ✅ Redirecionamento pós-login para home (todos os roles)
 -   ✅ Acesso a rotas protegidas após autenticação
+-   ✅ **Autorização negativa**: Colaborador NÃO acessa área de RH
 -   ✅ Persistência de sessão entre requisições no teste
--   ✅ Validação de diferentes tipos de usuário (admin/rh)
+-   ✅ Validação de diferentes tipos de usuário (admin/rh/collaborator)
+-   ✅ Testes com assertivas negativas usando `not()`
 
 ## 🔗 Rotas Principais
 

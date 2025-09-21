@@ -45,7 +45,6 @@ it('testing if an admin user can login with success', function () {
     expect($result->assertRedirect('/home'));
 });
 
-
 it('testing if an rh user can login in Admin route', function () {
 
     addRHUser();
@@ -69,6 +68,39 @@ it('testing if an rh user can login in Admin route', function () {
     expect($this->get('rh-users/management/home')->status())->toBe(200);
 });
 
+it('Testing if a collaborator can go to the home route.', function () {
+
+    addCollaborator();
+
+
+    $result = $this->post('/login', [
+        'email' => 'worker@rhmangnt.com',
+        'password' => 'Aa123456'
+    ]);
+
+    expect($result->status())->toBe(302);
+
+    expect($result->assertRedirect('home'));
+
+    expect($this->get('rh-users/management/home')->status())->not()->toBe(200);
+});
+
+
+
+function addCollaborator()
+{
+    User::insert([
+        'department_id' => 1,
+        'name' => 'collaborator',
+        'email' => 'worker@rhmangnt.com',
+        'email_verified_at' => now(),
+        'password' => bcrypt('Aa123456'),
+        'role' => 'collaborator',
+        'permissions' => '["colaborator"]',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+}
 
 function addAdminUser()
 {
