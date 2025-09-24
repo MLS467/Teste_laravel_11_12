@@ -240,6 +240,10 @@ O projeto utiliza PestPHP para testes. Os testes estão localizados em `tests/Fe
 4. **Teste de Login de Usuário RH**: Valida login de usuários RH e acesso a rotas específicas
 5. **Teste de Autorização Negativa**: Verifica que colaboradores **NÃO** têm acesso a rotas de RH
 
+#### Testes de Criação de Usuários (`CreateUserTest.php`)
+
+1. **Teste de Criação de Usuário RH**: Valida que administradores podem criar novos usuários RH através da interface web
+
 #### Funções Auxiliares nos Testes
 
 Para melhorar a organização e reutilização de código nos testes, foram implementadas funções auxiliares:
@@ -319,6 +323,22 @@ function addCollaborator() {
         'permissions' => '["colaborator"]',
         'created_at' => now(),
         'updated_at' => now(),
+    ]);
+}
+```
+
+**`addDepartment()`**: Função auxiliar para criação de departamentos
+
+-   **Propósito**: Criar departamentos para testes que envolvem relacionamentos
+-   **Parâmetro**: `$name` - Nome do departamento a ser criado
+-   **Uso**: Essencial para testes de criação de usuários que precisam de department_id válido
+
+```php
+function addDepartment($name) {
+    Department::insert([
+        "name" => $name,
+        "created_at" => Carbon::now(),
+        "updated_at" => Carbon::now(),
     ]);
 }
 ```
@@ -452,7 +472,129 @@ expect($status)->not()->toBe(200);
 -   **Acesso:** Limitado - **NÃO** tem acesso a áreas de RH ou admin
 -   **Uso nos testes:** Validação de autorização negativa
 
+### Testes de Banco de Dados e Verificação de Registros
+
+#### Teste de Criação de Usuário RH
+
+O teste `CreateUserTest.php` implementa um cenário completo de criação de usuário através da interface web, validando tanto o processo quanto a persistência no banco de dados.
+
+**Fluxo do teste:**
+
+```php
+it('tests if an admin can insert a new RH user', function () {
+    // 1. Preparação: Criar usuário admin
+    addAdminUser();
+
+    // 2. Preparação: Criar departamentos necessários
+    addDepartment('Administração');      // ID: 1
+    addDepartment('Recursos Humanos');   // ID: 2
+
+    // 3. Autenticação: Login como admin
+    $result = $this->post('/login', [
+        'email' => 'admin@rhmangnt.com',
+        'password' => 'Aa123456'
+    ]);
+
+    expect($result->status())->toBe(302);
+    expect($result->assertRedirect('/home'));
+
+    // 4. Ação: Criar novo usuário RH via POST
+    $value = $this->post('/rh-users/create-colaborator', [
+        'name' => 'RH USER 1',
+        'email' => 'rhuser55@gmail.com',
+        'select_department' => 2,           // Departamento RH
+        'address' => 'Rua 1',
+        'zip_code' => '1234-123',
+        'city' => '123-City',
+        'phone' => '123123123',
+        'salary' => '1000.00',
+        'admission_date' => '2021-01-01',
+        'role' => 'rh',
+        'permissions' => '["rh"]'
+    ]);
+
+    // 5. Verificação: Confirmar registro no banco de dados
+    $this->assertDatabaseHas('users', [
+        'name' => 'RH USER 1',
+        'email' => 'rhuser55@gmail.com',
+        'role' => 'rh'
+    ]);
+});
+```
+
+#### Como funciona `assertDatabaseHas()`
+
+A função `assertDatabaseHas()` é uma ferramenta poderosa do Laravel para verificar se registros existem no banco de dados durante os testes.
+
+**Sintaxe:**
+
+```php
+$this->assertDatabaseHas('nome_da_tabela', [
+    'campo1' => 'valor1',
+    'campo2' => 'valor2',
+    // ... mais campos conforme necessário
+]);
+```
+
+**Características importantes:**
+
+| Aspecto             | Comportamento                            | Explicação                                       |
+| ------------------- | ---------------------------------------- | ------------------------------------------------ |
+| **Verificação**     | 🔍 Busca na tabela especificada          | Executa query real no banco de teste             |
+| **Correspondência** | ✅ Todos os campos devem coincidir       | Funciona como WHERE com AND                      |
+| **Flexibilidade**   | 📊 Verifica apenas campos especificados  | Não precisa verificar todos os campos da tabela  |
+| **Falha**           | ❌ Teste falha se não encontrar registro | Garante que a operação realmente persistiu dados |
+
+#### Vantagens dos Testes de Banco de Dados:
+
+```php
+// ✅ VANTAGEM: Verifica persistência real
+$this->assertDatabaseHas('users', ['email' => 'test@example.com']);
+
+// ✅ VANTAGEM: Valida relacionamentos
+$this->assertDatabaseHas('users', [
+    'email' => 'rhuser55@gmail.com',
+    'department_id' => 2  // Verifica se FK foi salva corretamente
+]);
+
+// ✅ VANTAGEM: Confirma processamento de dados
+$this->assertDatabaseHas('user_details', [
+    'salary' => '1000.00',      // Confirma formatação de decimal
+    'admission_date' => '2021-01-01'  // Confirma conversão de data
+]);
+```
+
+#### Preparação de Dados para Testes Complexos:
+
+**1. Dependências de relacionamento:**
+
+```php
+// Ordem importa: criar departamentos antes de usuários
+addDepartment('Administração');      // ID: 1
+addDepartment('Recursos Humanos');   // ID: 2
+
+// Agora pode referenciar department_id = 2
+'select_department' => 2
+```
+
+**2. Dados de teste realistas:**
+
+-   **Endereço completo**: address, zip_code, city
+-   **Informações profissionais**: salary, admission_date, phone
+-   **Dados de autenticação**: role, permissions
+
+#### Cenários Validados no CreateUserTest:
+
+-   ✅ **Autorização**: Apenas admins podem criar usuários
+-   ✅ **Autenticação**: Login necessário antes da operação
+-   ✅ **Formulário web**: POST para rota específica funciona
+-   ✅ **Persistência**: Dados são realmente salvos no banco
+-   ✅ **Relacionamentos**: Department_id é associado corretamente
+-   ✅ **Dados estruturados**: Informações pessoais e profissionais completas
+
 ### Cenários de Teste Cobertos
+
+**Testes de Autenticação:**
 
 -   ✅ Redirecionamento de usuários não autenticados
 -   ✅ Exibição correta da página de login
@@ -467,6 +609,15 @@ expect($status)->not()->toBe(200);
 -   ✅ Validação de diferentes tipos de usuário (admin/rh/collaborator)
 -   ✅ Testes com assertivas negativas usando `not()`
 
+**Testes de Criação de Usuários:**
+
+-   ✅ **Criação de usuário RH**: Admin pode criar novos usuários RH
+-   ✅ **Verificação no banco**: `assertDatabaseHas()` confirma persistência
+-   ✅ **Relacionamentos**: Department_id é associado corretamente
+-   ✅ **Dados complexos**: Informações pessoais e profissionais completas
+-   ✅ **Preparação de dependências**: Criação de departamentos antes dos usuários
+-   ✅ **Formulário web completo**: Teste end-to-end da funcionalidade
+
 ## 🔗 Rotas Principais
 
 ### Rotas Públicas (Guest)
@@ -480,6 +631,8 @@ expect($status)->not()->toBe(200);
 
 -   `GET /home` - Dashboard principal
 -   `GET /` - Redirecionamento para login (se não autenticado)
+-   `GET /rh-users/management/home` - Área de gestão de RH
+-   `POST /rh-users/create-colaborator` - Criação de novos usuários/colaboradores
 
 ### Middleware
 

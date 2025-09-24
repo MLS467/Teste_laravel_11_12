@@ -17,6 +17,7 @@ it('display the login page when not logget in', function () {
     expect($this->get('/login')->content())->toContain("Esqueceu a sua senha?");
 });
 
+
 it("Forgot password", function () {
     $result = $this->get('/forgot-password');
 
@@ -24,6 +25,7 @@ it("Forgot password", function () {
 
     expect($result->content())->toContain("Já sei a minha senha?");
 });
+
 
 it('testing if an admin user can login with success', function () {
 
@@ -33,7 +35,7 @@ it('testing if an admin user can login with success', function () {
     $result = $this->post(
         '/login',
         [
-            'email' => 'admin@rhmangnt.com',
+            'email' => 'admin55@rhmangnt.com',
             'password' => 'Aa123456'
         ]
     );
@@ -44,6 +46,7 @@ it('testing if an admin user can login with success', function () {
     // testando se o redirecionamento chegou home com cod 200 ok
     expect($result->assertRedirect('/home'));
 });
+
 
 it('testing if an rh user can login in Admin route', function () {
 
@@ -68,6 +71,7 @@ it('testing if an rh user can login in Admin route', function () {
     expect($this->get('rh-users/management/home')->status())->toBe(200);
 });
 
+
 it('Testing if a collaborator can go to the home route.', function () {
 
     addCollaborator();
@@ -87,6 +91,9 @@ it('Testing if a collaborator can go to the home route.', function () {
 
 
 
+
+
+
 function addCollaborator()
 {
     User::insert([
@@ -101,6 +108,7 @@ function addCollaborator()
         'updated_at' => now(),
     ]);
 }
+
 
 function addAdminUser()
 {
@@ -117,6 +125,7 @@ function addAdminUser()
         'updated_at' => now(),
     ]);
 }
+
 function addRHUser()
 {
     // cria o usuário no banco de dados em memória
