@@ -245,6 +245,11 @@ O projeto utiliza PestPHP para testes. Os testes estão localizados em `tests/Fe
 1. **Teste de Criação de Usuário RH**: Valida que administradores podem criar novos usuários RH através da interface web
 2. **Teste de Criação de Colaborador por RH**: Valida que usuários RH podem criar colaboradores e verifica autenticação de usuário logado
 
+#### Testes de Acesso (`AccessTest.php`)
+
+1. **Teste de Acesso Protegido**: Verifica se usuários autenticados têm acesso a telas protegidas
+2. **Teste de Redirecionamento sem Autenticação**: Valida que usuários não logados são redirecionados ao tentar acessar rotas protegidas
+
 #### Funções Auxiliares nos Testes
 
 Para melhorar a organização e reutilização de código nos testes, foram implementadas funções auxiliares:
@@ -686,6 +691,100 @@ expect(auth()->user()->role)->toBe('rh');
 -   ✅ **Validação de role**: Confirma que o teste está rodando no contexto adequado
 -   ✅ **Debug auxiliar**: Ajuda a identificar problemas de autenticação nos testes
 
+### Testes de Controle de Acesso
+
+#### Teste de Acesso a Telas Protegidas (`AccessTest.php`)
+
+Os testes de acesso focam em validar o controle de acesso a rotas protegidas, usando diferentes métodos de autenticação nos testes.
+
+**Teste 1: Acesso com usuário autenticado**
+
+```php
+it('testing if has access in a protected screen', function () {
+    // 1. Preparação: Criar usuário admin
+    addAdminUser(); // Cria usuário com ID 1
+
+    // 2. Autenticação direta: Método alternativo ao POST /login
+    auth()->loginUsingId(1); // ← Autentica diretamente pelo ID
+
+    // 3. Verificação: Acesso à rota protegida
+    expect($this->get('/rh-users')->status())->toBe(200);
+});
+```
+
+**Teste 2: Validação de redirecionamento sem autenticação**
+
+```php
+it('test if user is not logged can access home page', function () {
+    // Usuário NÃO autenticado tenta acessar rota protegida
+
+    // ❌ Método incorreto (comentado no código)
+    // expect($this->get('/home')->status())->not()->toBe(200);
+
+    // ✅ Método correto: Espera redirect (302)
+    expect($this->get('/home')->status())->toBe(302);
+});
+```
+
+#### Método `auth()->loginUsingId()`
+
+**Vantagens sobre POST `/login`:**
+
+| Aspecto        | `POST /login`                    | `auth()->loginUsingId()`               |
+| -------------- | -------------------------------- | -------------------------------------- |
+| **Processo**   | 🔐 Simula processo real de login | ⚡ Autenticação direta                 |
+| **Velocidade** | 🐌 Mais lento (HTTP + validação) | 🚀 Mais rápido (bypass de validações)  |
+| **Uso**        | 🎯 Testa fluxo completo de login | 🛠️ Foca no teste de acesso/autorização |
+| **Propósito**  | 📝 Testa autenticação em si      | 🔍 Testa funcionalidades pós-login     |
+
+#### Quando usar cada método:
+
+```php
+// ✅ Para testar LOGIN em si
+it('admin can login', function () {
+    addAdminUser();
+    $result = $this->post('/login', [
+        'email' => 'admin@example.com',
+        'password' => 'password'
+    ]);
+    // ... testar o processo de login
+});
+
+// ✅ Para testar ACESSO após login
+it('admin can access protected route', function () {
+    addAdminUser();
+    auth()->loginUsingId(1); // ← Mais eficiente
+    expect($this->get('/admin-panel')->status())->toBe(200);
+});
+```
+
+#### Padrões de Status HTTP em Testes:
+
+```php
+// ✅ ACESSO PERMITIDO
+expect($response->status())->toBe(200); // OK
+
+// ✅ REDIRECT POR AUTENTICAÇÃO
+expect($response->status())->toBe(302); // Found/Redirect
+
+// ✅ ACESSO NEGADO
+expect($response->status())->toBe(403); // Forbidden
+
+// ✅ ROTA NÃO ENCONTRADA
+expect($response->status())->toBe(404); // Not Found
+
+// ❌ USO INCORRETO de not()
+expect($response->status())->not()->toBe(200); // Ambíguo
+```
+
+#### Cenários Validados no AccessTest:
+
+-   ✅ **Autenticação direta**: `auth()->loginUsingId()` para testes focados
+-   ✅ **Acesso a rotas protegidas**: Usuário autenticado acessa `/rh-users`
+-   ✅ **Redirecionamento correto**: Status 302 para usuários não autenticados
+-   ✅ **Validação de status HTTP**: Uso correto de códigos de resposta
+-   ✅ **Métodos otimizados**: Escolha adequada entre simulação real vs autenticação direta
+
 #### Cenários Validados no CreateUserTest:
 
 **Teste 1 - Admin criando usuário RH:**
@@ -734,6 +833,15 @@ expect(auth()->user()->role)->toBe('rh');
 -   ✅ **Preparação de dependências**: Criação de múltiplos departamentos
 -   ✅ **Formulário web completo**: Testes end-to-end das funcionalidades
 
+**Testes de Controle de Acesso:**
+
+-   ✅ **Autenticação direta**: `auth()->loginUsingId()` para testes otimizados
+-   ✅ **Acesso a rotas protegidas**: Validação de status 200 para usuários autenticados
+-   ✅ **Redirecionamento sem autenticação**: Status 302 para usuários não logados
+-   ✅ **Validação de status HTTP**: Uso correto de códigos de resposta
+-   ✅ **Métodos eficientes**: Escolha adequada entre login real vs autenticação direta
+-   ✅ **Controle de acesso**: Verificação de permissões em telas administrativas
+
 ## 🔗 Rotas Principais
 
 ### Rotas Públicas (Guest)
@@ -747,6 +855,7 @@ expect(auth()->user()->role)->toBe('rh');
 
 -   `GET /home` - Dashboard principal
 -   `GET /` - Redirecionamento para login (se não autenticado)
+-   `GET /rh-users` - Área administrativa de usuários RH
 -   `GET /rh-users/management/home` - Área de gestão de RH
 -   `POST /rh-users/create-colaborator` - Criação de usuários RH (rota admin)
 -   `POST /rh-users/management/create-colaborator` - Criação de colaboradores (rota RH)
