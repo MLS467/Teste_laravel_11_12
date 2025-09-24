@@ -249,6 +249,8 @@ O projeto utiliza PestPHP para testes. Os testes estão localizados em `tests/Fe
 
 1. **Teste de Acesso Protegido**: Verifica se usuários autenticados têm acesso a telas protegidas
 2. **Teste de Redirecionamento sem Autenticação**: Valida que usuários não logados são redirecionados ao tentar acessar rotas protegidas
+3. **Teste de Redirecionamento Login para Home**: Verifica que usuários logados são redirecionados da página de login para home
+4. **Teste de Redirecionamento Recuperação para Home**: Verifica que usuários logados são redirecionados da página de recuperação para home
 
 #### Funções Auxiliares nos Testes
 
@@ -726,6 +728,66 @@ it('test if user is not logged can access home page', function () {
 });
 ```
 
+**Teste 3: Usuário logado acessando página de login**
+
+```php
+it('test if user logged can access login page', function () {
+    // 1. Preparação: Criar e autenticar usuário
+    addAdminUser();
+    auth()->loginUsingId(1);
+    
+    // 2. Tentativa: Usuário logado tenta acessar página de login
+    $result = $this->get('/login');
+    
+    // 3. Verificação: Deve ser redirecionado para home
+    expect($result->status())->toBe(302);
+    expect($result->assertRedirect('/home'));
+});
+```
+
+**Teste 4: Usuário logado acessando página de recuperação**
+
+```php
+it('test if user logged can access recover password page', function () {
+    // 1. Preparação: Criar e autenticar usuário
+    addAdminUser();
+    auth()->loginUsingId(1);
+    
+    // 2. Tentativa: Usuário logado tenta acessar recuperação de senha
+    $result = $this->get('/forgot-password');
+    
+    // 3. Verificação: Deve ser redirecionado para home
+    expect($result->status())->toBe(302);
+    expect($result->assertRedirect('/home'));
+});
+```
+
+#### Lógica de Redirecionamento Inteligente
+
+**Os Testes 3 e 4 validam uma lógica importante do sistema:**
+
+```php
+// 🧠 LÓGICA: Usuários já autenticados não precisam das páginas de login/recuperação
+// ✅ COMPORTAMENTO: Redirecionar automaticamente para /home
+```
+
+**Por que isso é importante?**
+
+| Cenário | Sem Redirecionamento | Com Redirecionamento | Vantagem |
+|---------|---------------------|---------------------|-----------|
+| **UX** | 😕 Usuário vê tela de login desnecessária | 😊 Vai direto para área logada | Melhor experiência |
+| **Segurança** | 🔓 Estado confuso (logado vendo login) | 🔐 Estado claro e consistente | Mais seguro |
+| **Performance** | 📊 Renderização desnecessária | ⚡ Redirect eficiente | Mais rápido |
+| **Navegação** | 🔄 Usuário precisa navegar manualmente | 🎯 Navegação automática | Mais intuitivo |
+
+**Fluxo prático:**
+1. **Usuário logado** digita `/login` na barra de endereço
+2. **Sistema detecta** que já está autenticado  
+3. **Redirect automático** para `/home` (302)
+4. **Resultado**: Usuário vai direto para sua área de trabalho
+
+**Mesmo comportamento** se aplica a `/forgot-password` - usuários logados não precisam recuperar senha!
+
 #### Método `auth()->loginUsingId()`
 
 **Vantagens sobre POST `/login`:**
@@ -781,9 +843,12 @@ expect($response->status())->not()->toBe(200); // Ambíguo
 
 -   ✅ **Autenticação direta**: `auth()->loginUsingId()` para testes focados
 -   ✅ **Acesso a rotas protegidas**: Usuário autenticado acessa `/rh-users`
--   ✅ **Redirecionamento correto**: Status 302 para usuários não autenticados
+-   ✅ **Redirecionamento sem autenticação**: Status 302 para usuários não autenticados tentando acessar `/home`
+-   ✅ **Prevenção de duplo login**: Usuários logados são redirecionados de `/login` para `/home`
+-   ✅ **Prevenção de recuperação desnecessária**: Usuários logados são redirecionados de `/forgot-password` para `/home`
 -   ✅ **Validação de status HTTP**: Uso correto de códigos de resposta
 -   ✅ **Métodos otimizados**: Escolha adequada entre simulação real vs autenticação direta
+-   ✅ **Lógica de redirecionamento**: Comportamento inteligente baseado no estado de autenticação
 
 #### Cenários Validados no CreateUserTest:
 
@@ -837,7 +902,9 @@ expect($response->status())->not()->toBe(200); // Ambíguo
 
 -   ✅ **Autenticação direta**: `auth()->loginUsingId()` para testes otimizados
 -   ✅ **Acesso a rotas protegidas**: Validação de status 200 para usuários autenticados
--   ✅ **Redirecionamento sem autenticação**: Status 302 para usuários não logados
+-   ✅ **Redirecionamento sem autenticação**: Status 302 para usuários não logados tentando acessar `/home`
+-   ✅ **Prevenção de acesso duplo**: Usuários logados redirecionados de `/login` e `/forgot-password`
+-   ✅ **Lógica de redirecionamento inteligente**: Comportamento baseado no estado de autenticação
 -   ✅ **Validação de status HTTP**: Uso correto de códigos de resposta
 -   ✅ **Métodos eficientes**: Escolha adequada entre login real vs autenticação direta
 -   ✅ **Controle de acesso**: Verificação de permissões em telas administrativas

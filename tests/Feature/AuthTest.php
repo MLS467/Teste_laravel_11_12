@@ -35,7 +35,7 @@ it('testing if an admin user can login with success', function () {
     $result = $this->post(
         '/login',
         [
-            'email' => 'admin55@rhmangnt.com',
+            'email' => 'admin@rhmangnt.com',
             'password' => 'Aa123456'
         ]
     );
