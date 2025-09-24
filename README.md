@@ -243,6 +243,7 @@ O projeto utiliza PestPHP para testes. Os testes estão localizados em `tests/Fe
 #### Testes de Criação de Usuários (`CreateUserTest.php`)
 
 1. **Teste de Criação de Usuário RH**: Valida que administradores podem criar novos usuários RH através da interface web
+2. **Teste de Criação de Colaborador por RH**: Valida que usuários RH podem criar colaboradores e verifica autenticação de usuário logado
 
 #### Funções Auxiliares nos Testes
 
@@ -583,13 +584,125 @@ addDepartment('Recursos Humanos');   // ID: 2
 -   **Informações profissionais**: salary, admission_date, phone
 -   **Dados de autenticação**: role, permissions
 
+#### Teste de Usuário RH Criando Colaborador
+
+O segundo teste implementa um cenário onde um **usuário RH** (não admin) cria um colaborador, demonstrando diferentes níveis de permissão e métodos de verificação de banco.
+
+**Fluxo do teste:**
+
+```php
+it('test if a RH user can to insert an user', function () {
+    // 1. Preparação: Criar departamentos (3 para teste)
+    addDepartment('Administração');     // ID: 1
+    addDepartment('Recursos Humanos');  // ID: 2
+    addDepartment('teste3');            // ID: 3
+
+    // 2. Preparação: Criar usuário RH
+    addRHUser(); // (department_id: 2, role: 'rh')
+
+    // 3. Autenticação: Login como RH
+    $result = $this->post('/login', [
+        'email' => 'admin1@rhmangnt.com',
+        'password' => 'Aa123456'
+    ]);
+
+    // 4. Verificação: Confirmar role do usuário logado
+    expect(auth()->user()->role)->toBe('rh');
+
+    // 5. Ação: RH cria colaborador (rota diferente do admin)
+    $this->post('/rh-users/management/create-colaborator', [
+        'name' => 'colaborator USER 1',
+        'email' => 'colaboratoruser5@gmail.com',
+        'select_department' => 3,        // Departamento 'teste3'
+        'address' => 'Rua 1',
+        'zip_code' => '1234-123',
+        'city' => '123-City',
+        'phone' => '123123123',
+        'salary' => '1000.00',
+        'admission_date' => '2021-01-01',
+        'role' => 'colaborator',
+        'permissions' => '["colaborator"]'
+    ]);
+
+    // 6. Verificação alternativa: Usando Eloquent where()
+    $values_where = [
+        ['email', '=', 'colaboratoruser5@gmail.com'],
+        ['name', '=', 'colaborator USER 1'],
+        ['role', '=', 'colaborator']
+    ];
+
+    expect(User::where($values_where)->exists())->toBeTrue();
+});
+```
+
+#### Métodos de Verificação de Banco de Dados
+
+##### **1. Laravel Testing: `assertDatabaseHas()`**
+
+```php
+// ✅ Método tradicional do Laravel
+$this->assertDatabaseHas('users', [
+    'name' => 'colaborator USER 1',
+    'email' => 'colaboratoruser5@gmail.com',
+    'role' => 'colaborator',
+]);
+```
+
+##### **2. PestPHP + Eloquent: `where()->exists()`**
+
+```php
+// ✅ Método alternativo com PestPHP
+$values_where = [
+    ['email', '=', 'colaboratoruser5@gmail.com'],
+    ['name', '=', 'colaborator USER 1'],
+    ['role', '=', 'colaborator']
+];
+
+expect(User::where($values_where)->exists())->toBeTrue();
+```
+
+#### Diferenças entre os Métodos:
+
+| Aspecto           | `assertDatabaseHas()`        | `where()->exists()`             |
+| ----------------- | ---------------------------- | ------------------------------- |
+| **Framework**     | 🔧 Laravel Testing           | 🧪 PestPHP + Eloquent           |
+| **Sintaxe**       | 📝 Array associativo simples | 📊 Array de condições múltiplas |
+| **Flexibilidade** | ⚡ Direto e simples          | 🎯 Mais controle sobre queries  |
+| **Performance**   | 🚀 Query otimizada           | 🔍 Query Eloquent padrão        |
+| **Uso**           | 💡 Para verificações simples | 🛠️ Para condições complexas     |
+
+#### Verificação de Usuário Autenticado
+
+**Nova funcionalidade demonstrada:**
+
+```php
+// Verificar role do usuário logado na sessão
+expect(auth()->user()->role)->toBe('rh');
+```
+
+**Benefícios:**
+
+-   ✅ **Confirmação de contexto**: Garante que o usuário correto está logado
+-   ✅ **Validação de role**: Confirma que o teste está rodando no contexto adequado
+-   ✅ **Debug auxiliar**: Ajuda a identificar problemas de autenticação nos testes
+
 #### Cenários Validados no CreateUserTest:
 
--   ✅ **Autorização**: Apenas admins podem criar usuários
+**Teste 1 - Admin criando usuário RH:**
+
+-   ✅ **Autorização**: Apenas admins podem criar usuários RH
 -   ✅ **Autenticação**: Login necessário antes da operação
--   ✅ **Formulário web**: POST para rota específica funciona
--   ✅ **Persistência**: Dados são realmente salvos no banco
+-   ✅ **Formulário web**: POST para rota `/rh-users/create-colaborator`
+-   ✅ **Persistência**: Dados salvos com `assertDatabaseHas()`
 -   ✅ **Relacionamentos**: Department_id é associado corretamente
+
+**Teste 2 - RH criando colaborador:**
+
+-   ✅ **Hierarquia de permissões**: RH pode criar colaboradores (não apenas admin)
+-   ✅ **Rotas diferentes**: `/rh-users/management/create-colaborator` (rota específica para RH)
+-   ✅ **Verificação de contexto**: `expect(auth()->user()->role)->toBe('rh')`
+-   ✅ **Múltiplos departamentos**: Teste com 3 departamentos para flexibilidade
+-   ✅ **Método alternativo**: Verificação com `User::where()->exists()`
 -   ✅ **Dados estruturados**: Informações pessoais e profissionais completas
 
 ### Cenários de Teste Cobertos
@@ -611,12 +724,15 @@ addDepartment('Recursos Humanos');   // ID: 2
 
 **Testes de Criação de Usuários:**
 
--   ✅ **Criação de usuário RH**: Admin pode criar novos usuários RH
--   ✅ **Verificação no banco**: `assertDatabaseHas()` confirma persistência
+-   ✅ **Criação de usuário RH por Admin**: Admin pode criar novos usuários RH
+-   ✅ **Criação de colaborador por RH**: RH pode criar colaboradores
+-   ✅ **Verificação de contexto**: `auth()->user()->role` confirma usuário logado
+-   ✅ **Múltiplos métodos de verificação**: `assertDatabaseHas()` e `where()->exists()`
+-   ✅ **Rotas hierárquicas**: Diferentes rotas para admin e RH
 -   ✅ **Relacionamentos**: Department_id é associado corretamente
 -   ✅ **Dados complexos**: Informações pessoais e profissionais completas
--   ✅ **Preparação de dependências**: Criação de departamentos antes dos usuários
--   ✅ **Formulário web completo**: Teste end-to-end da funcionalidade
+-   ✅ **Preparação de dependências**: Criação de múltiplos departamentos
+-   ✅ **Formulário web completo**: Testes end-to-end das funcionalidades
 
 ## 🔗 Rotas Principais
 
@@ -632,7 +748,8 @@ addDepartment('Recursos Humanos');   // ID: 2
 -   `GET /home` - Dashboard principal
 -   `GET /` - Redirecionamento para login (se não autenticado)
 -   `GET /rh-users/management/home` - Área de gestão de RH
--   `POST /rh-users/create-colaborator` - Criação de novos usuários/colaboradores
+-   `POST /rh-users/create-colaborator` - Criação de usuários RH (rota admin)
+-   `POST /rh-users/management/create-colaborator` - Criação de colaboradores (rota RH)
 
 ### Middleware
 

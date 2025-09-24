@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Department;
+use App\Models\User;
 use Illuminate\Support\Carbon;
 
 it('tests if an admin can insert a new RH user', function () {
@@ -48,6 +49,64 @@ it('tests if an admin can insert a new RH user', function () {
         'email' => 'rhuser55@gmail.com',
         'role' => 'rh'
     ]);
+});
+
+
+
+
+
+it('test if a RH user can to insert an user', function () {
+
+    // departamento
+    addDepartment('Administração');
+    addDepartment('Recursos Humanos');
+    addDepartment('teste3');
+
+    // adicionar um rh user
+    addRHUser();
+
+    // fazer o login de rh user
+    $result = $this->post(
+        '/login',
+        [
+            'email' => 'admin1@rhmangnt.com',
+            'password' => 'Aa123456'
+        ]
+    );
+
+    expect(auth()->user()->role)->toBe('rh');
+
+    // inserir um novo colaborador
+    $this->post('/rh-users/management/create-colaborator', [
+        'name' => 'colaborator USER 1',
+        'email' => 'colaboratoruser5@gmail.com',
+        'select_department' => 3,
+        'address' => 'Rua 1',
+        'zip_code' => '1234-123',
+        'city' => '123-City',
+        'phone' => '123123123',
+        'salary' => '1000.00',
+        'admission_date' => '2021-01-01',
+        'role' => 'colaborator',
+        'permissions' => '["colaborator"]'
+    ]);
+
+
+    // verificar se está no banco de dados PHPUnit
+    // $this->assertDatabaseHas('users', [
+    //     'name' => 'colaborator USER 1',
+    //     'email' => 'colaboratoruser5@gmail.com',
+    //     'role' => 'colaborator',
+    // ]);
+
+    $values_where = [
+        ['email', '=', 'colaboratoruser5@gmail.com'],
+        ['name', '=', 'colaborator USER 1'],
+        ['role', '=', 'colaborator']
+    ];
+
+    // usando pestPHP
+    expect(User::where($values_where)->exists())->toBeTrue();
 });
 
 
