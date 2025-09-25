@@ -250,6 +250,53 @@ App\Services\GeneralServices::getSalaryWithBonus(3000, 10);
 // Resultado: 3300 (salário + 10% de bônus)
 ```
 
+##### 4. `fakeDataInJson()`
+
+**Propósito**: Gerar dados fictícios em formato JSON para testes e prototipagem
+
+```php
+public static function fakeDataInJson()
+{
+    $data = [];
+
+    for ($i = 0; $i < 10; $i++) {
+        $data[] = [
+            'name' => \Faker\Factory::create()->name(),
+            'email' => \Faker\Factory::create()->email(),
+            'phone' => \Faker\Factory::create()->phoneNumber(),
+            'address' => \Faker\Factory::create()->address(),
+        ];
+    }
+
+    return json_encode($data, JSON_PRETTY_PRINT);
+}
+```
+
+**Exemplo de uso:**
+
+```php
+// Via Tinker
+App\Services\GeneralServices::fakeDataInJson();
+/* Resultado: JSON com 10 registros fictícios
+[
+    {
+        "name": "João Silva",
+        "email": "joao@exemplo.com",
+        "phone": "(11) 98765-4321",
+        "address": "Rua das Flores, 123, São Paulo - SP"
+    },
+    // ... mais 9 registros
+]
+*/
+```
+
+**Casos de uso:**
+
+-   **Prototipagem rápida**: Gerar dados para desenvolvimento
+-   **Testes de interface**: Popular formulários com dados realísticos
+-   **Demonstrações**: Apresentar funcionalidades com dados fictícios
+-   **Desenvolvimento de APIs**: Simular responses com dados estruturados
+
 ### Testando via Laravel Tinker
 
 #### Como executar os testes manuais:
@@ -270,7 +317,10 @@ App\Services\GeneralServices::getSalaryWithBonus(2000, 20);  // +20%
 App\Services\GeneralServices::getSalaryWithBonus(1800, 15);  // +15%
 App\Services\GeneralServices::getSalaryWithBonus(5000, 5);   // +5%
 
-# 5. Sair do Tinker
+# 5. Testar geração de dados fictícios
+App\Services\GeneralServices::fakeDataInJson();
+
+# 6. Sair do Tinker
 exit
 ```
 
@@ -289,6 +339,7 @@ exit
 -   **Comparação de salários**: Validar se funcionário atende critérios salariais
 -   **Relatórios formatados**: Gerar textos padronizados com dados de funcionários
 -   **Cálculos de bonificação**: Aplicar bônus por performance, tempo de casa, etc.
+-   **Geração de dados de teste**: Criar datasets fictícios para desenvolvimento e demonstrações
 
 ## �🛠️ Instalação
 
@@ -377,6 +428,104 @@ O projeto utiliza PestPHP para testes. Os testes estão localizados em `tests/Fe
 2. **Teste de Redirecionamento sem Autenticação**: Valida que usuários não logados são redirecionados ao tentar acessar rotas protegidas
 3. **Teste de Redirecionamento Login para Home**: Verifica que usuários logados são redirecionados da página de login para home
 4. **Teste de Redirecionamento Recuperação para Home**: Verifica que usuários logados são redirecionados da página de recuperação para home
+
+#### Testes Unitários de Serviços (`GeneralServicesTest.php`)
+
+Esta bateria de testes valida as funcionalidades da classe `GeneralServices`, garantindo que todas as operações utilitárias funcionem corretamente.
+
+**Localização**: `tests/Unit/GeneralServicesTest.php`
+
+##### 1. Teste de Comparação de Salário (Positivo)
+
+```php
+it('check if the salary is greather than a specific amount', function () {
+    $salary = 1000;
+    $amout = 500;
+
+    $result = GeneralServices::checkIfSalaryIsGreaterThan($salary, $amout);
+
+    expect($result)->toBeTrue();
+});
+```
+
+**Validação**: Confirma que um salário maior que o valor de comparação retorna `true`
+
+##### 2. Teste de Comparação de Salário (Negativo)
+
+```php
+it('check if the salary is not greather than a specific amount', function () {
+    $salary = 400;
+    $amout = 500;
+
+    $result = GeneralServices::checkIfSalaryIsGreaterThan($salary, $amout);
+
+    expect($result)->toBeFalse();
+});
+```
+
+**Validação**: Confirma que um salário menor que o valor de comparação retorna `false`
+
+##### 3. Teste de Formatação de Frase
+
+```php
+it('tests if the phrase is correctly', function () {
+    $nome = "Maisson";
+    $salario = 4500;
+
+    $result = GeneralServices::createPhraseWithNameAndSalary($nome, $salario);
+
+    expect($result)->toBe("O name é -> Maisson e o salário é R$ 4500");
+});
+```
+
+**Validação**: Verifica se a formatação da frase com nome e salário está correta
+
+##### 4. Teste de Cálculo de Bônus
+
+```php
+it('tests if the salary has bonus correctly', function () {
+    $salario = 4500;
+    $bonus = 10;
+
+    $result = GeneralServices::getSalaryWithBonus($salario, $bonus);
+
+    expect($result)->toBe(4950.0);
+});
+```
+
+**Validação**: Confirma que o cálculo de bônus percentual está correto (4500 + 10% = 4950)
+
+##### 5. Teste de Geração de Dados Fictícios
+
+```php
+it('test if json structure is correctly', function () {
+    $json = GeneralServices::fakeDataInJson();
+    $json_result = json_decode($json, true);
+
+    expect($json_result)->toBeGreaterThan(1);
+    expect($json_result[0])->toHaveKeys(['name', 'email', 'phone', 'address']);
+});
+```
+
+**Validação**:
+
+-   Verifica se o JSON contém mais de 1 registro
+-   Confirma que cada registro possui as chaves obrigatórias: `name`, `email`, `phone`, `address`
+
+##### Cobertura de Testes dos Services
+
+| Método                            | Cenários Testados                           | Status |
+| --------------------------------- | ------------------------------------------- | ------ |
+| `checkIfSalaryIsGreaterThan()`    | Salário maior ✅<br>Salário menor ✅        | 100%   |
+| `createPhraseWithNameAndSalary()` | Formatação correta ✅                       | 100%   |
+| `getSalaryWithBonus()`            | Cálculo de bônus ✅                         | 100%   |
+| `fakeDataInJson()`                | Estrutura JSON ✅<br>Chaves obrigatórias ✅ | 100%   |
+
+**Executar apenas os testes de Services:**
+
+```bash
+./vendor/bin/pest tests/Unit/GeneralServicesTest.php
+```
 
 #### Funções Auxiliares nos Testes
 
