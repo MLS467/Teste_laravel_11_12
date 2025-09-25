@@ -39,6 +39,13 @@ Um sistema de gestão de recursos humanos desenvolvido com Laravel 11, utilizand
 -   Departamentos
 -   Administração do sistema
 
+### Serviços e Utilitários
+
+-   Cálculos salariais e bonificações
+-   Validações de critérios salariais
+-   Formatação de dados para relatórios
+-   Funções utilitárias testáveis via Tinker
+
 ## 📁 Estrutura do Projeto
 
 ```
@@ -50,6 +57,8 @@ rh_mangnt/
 │   │   ├── UserDetail.php      # Detalhes do usuário
 │   │   └── Department.php      # Departamentos
 │   ├── Mail/                   # Classes de email
+│   ├── Services/               # Serviços e lógica de negócio
+│   │   └── GeneralServices.php # Funções utilitárias gerais
 │   └── Providers/              # Service Providers
 ├── database/
 │   ├── migrations/             # Migrações do banco
@@ -164,7 +173,124 @@ O modelo `User` possui os seguintes campos principais:
 -   `remember_token`: Token para "lembrar de mim"
 -   `confirmation_token`: Token para confirmação de conta
 
-## 🛠️ Instalação
+## � Services e Lógica de Negócio
+
+### Classe GeneralServices
+
+O sistema implementa uma camada de serviços para encapsular lógica de negócio reutilizável. A classe `GeneralServices` contém funções utilitárias para cálculos e operações comuns no sistema de RH.
+
+#### Localização
+
+```
+app/Services/GeneralServices.php
+```
+
+#### Métodos Implementados
+
+##### 1. `checkIfSalaryIsGreaterThan()`
+
+**Propósito**: Verificar se um salário é maior que um valor específico
+
+```php
+public static function checkIfSalaryIsGreaterThan($salary, $amount)
+{
+    return $salary > $amount;
+}
+```
+
+**Exemplo de uso:**
+
+```php
+// Via Tinker
+App\Services\GeneralServices::checkIfSalaryIsGreaterThan(2500, 2000);
+// Resultado: true
+
+App\Services\GeneralServices::checkIfSalaryIsGreaterThan(1800, 2000);
+// Resultado: false
+```
+
+##### 2. `createPhraseWithNameAndSalary()`
+
+**Propósito**: Criar frase formatada com nome e salário do funcionário
+
+```php
+public static function createPhraseWithNameAndSalary($name, $salary)
+{
+    return "O name é -> $name e o salário é R$ $salary";
+}
+```
+
+**Exemplo de uso:**
+
+```php
+// Via Tinker
+App\Services\GeneralServices::createPhraseWithNameAndSalary('João Silva', 3500);
+// Resultado: "O name é -> João Silva e o salário é R$ 3500"
+```
+
+##### 3. `getSalaryWithBonus()`
+
+**Propósito**: Calcular salário com bônus percentual aplicado
+
+```php
+public static function getSalaryWithBonus($salary, $porcent_bonus)
+{
+    return $salary * (($porcent_bonus + 100) / 100);
+}
+```
+
+**Exemplo de uso:**
+
+```php
+// Via Tinker
+App\Services\GeneralServices::getSalaryWithBonus(2000, 15);
+// Resultado: 2300 (salário + 15% de bônus)
+
+App\Services\GeneralServices::getSalaryWithBonus(3000, 10);
+// Resultado: 3300 (salário + 10% de bônus)
+```
+
+### Testando via Laravel Tinker
+
+#### Como executar os testes manuais:
+
+```bash
+# 1. Abrir o Tinker
+php artisan tinker
+
+# 2. Testar função de comparação de salário
+App\Services\GeneralServices::checkIfSalaryIsGreaterThan(2500, 2000);
+App\Services\GeneralServices::checkIfSalaryIsGreaterThan(1500, 2000);
+
+# 3. Testar criação de frase
+App\Services\GeneralServices::createPhraseWithNameAndSalary('Maria Santos', 4200);
+
+# 4. Testar cálculo de bônus
+App\Services\GeneralServices::getSalaryWithBonus(2000, 20);  // +20%
+App\Services\GeneralServices::getSalaryWithBonus(1800, 15);  // +15%
+App\Services\GeneralServices::getSalaryWithBonus(5000, 5);   // +5%
+
+# 5. Sair do Tinker
+exit
+```
+
+#### Vantagens dos Services
+
+| Aspecto              | Benefício                                         |
+| -------------------- | ------------------------------------------------- |
+| **Reutilização**     | 🔄 Funções podem ser usadas em múltiplos lugares  |
+| **Testabilidade**    | 🧪 Fácil teste via Tinker ou testes automatizados |
+| **Organização**      | 📁 Lógica de negócio separada dos controllers     |
+| **Manutenibilidade** | 🛠️ Mudanças centralizadas em um local             |
+| **Performance**      | ⚡ Métodos estáticos para funções utilitárias     |
+
+#### Casos de Uso Reais
+
+-   **Comparação de salários**: Validar se funcionário atende critérios salariais
+-   **Relatórios formatados**: Gerar textos padronizados com dados de funcionários
+-   **Cálculos de bonificação**: Aplicar bônus por performance, tempo de casa, etc.
+
+## �🛠️ Instalação
 
 1. **Clone o repositório**:
 
@@ -735,10 +861,10 @@ it('test if user logged can access login page', function () {
     // 1. Preparação: Criar e autenticar usuário
     addAdminUser();
     auth()->loginUsingId(1);
-    
+
     // 2. Tentativa: Usuário logado tenta acessar página de login
     $result = $this->get('/login');
-    
+
     // 3. Verificação: Deve ser redirecionado para home
     expect($result->status())->toBe(302);
     expect($result->assertRedirect('/home'));
@@ -752,10 +878,10 @@ it('test if user logged can access recover password page', function () {
     // 1. Preparação: Criar e autenticar usuário
     addAdminUser();
     auth()->loginUsingId(1);
-    
+
     // 2. Tentativa: Usuário logado tenta acessar recuperação de senha
     $result = $this->get('/forgot-password');
-    
+
     // 3. Verificação: Deve ser redirecionado para home
     expect($result->status())->toBe(302);
     expect($result->assertRedirect('/home'));
@@ -773,16 +899,17 @@ it('test if user logged can access recover password page', function () {
 
 **Por que isso é importante?**
 
-| Cenário | Sem Redirecionamento | Com Redirecionamento | Vantagem |
-|---------|---------------------|---------------------|-----------|
-| **UX** | 😕 Usuário vê tela de login desnecessária | 😊 Vai direto para área logada | Melhor experiência |
-| **Segurança** | 🔓 Estado confuso (logado vendo login) | 🔐 Estado claro e consistente | Mais seguro |
-| **Performance** | 📊 Renderização desnecessária | ⚡ Redirect eficiente | Mais rápido |
-| **Navegação** | 🔄 Usuário precisa navegar manualmente | 🎯 Navegação automática | Mais intuitivo |
+| Cenário         | Sem Redirecionamento                      | Com Redirecionamento           | Vantagem           |
+| --------------- | ----------------------------------------- | ------------------------------ | ------------------ |
+| **UX**          | 😕 Usuário vê tela de login desnecessária | 😊 Vai direto para área logada | Melhor experiência |
+| **Segurança**   | 🔓 Estado confuso (logado vendo login)    | 🔐 Estado claro e consistente  | Mais seguro        |
+| **Performance** | 📊 Renderização desnecessária             | ⚡ Redirect eficiente          | Mais rápido        |
+| **Navegação**   | 🔄 Usuário precisa navegar manualmente    | 🎯 Navegação automática        | Mais intuitivo     |
 
 **Fluxo prático:**
+
 1. **Usuário logado** digita `/login` na barra de endereço
-2. **Sistema detecta** que já está autenticado  
+2. **Sistema detecta** que já está autenticado
 3. **Redirect automático** para `/home` (302)
 4. **Resultado**: Usuário vai direto para sua área de trabalho
 

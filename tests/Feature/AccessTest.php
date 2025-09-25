@@ -36,6 +36,7 @@ it('test if user logged can access login page', function () {
     expect($result->assertRedirect('/home'));
 });
 
+
 it('test if user logged can access recover password page', function () {
 
     addAdminUser();
