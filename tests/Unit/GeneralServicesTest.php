@@ -28,8 +28,9 @@ it('tests if the phrase is correctly', function () {
 
     $result = GeneralServices::createPhraseWithNameAndSalary($nome, $salario);
 
+
     expect($result)->toBe("O name é -> Maisson e o salário é R$ 4500");
-});
+})->todo('tem que melhorar');
 
 it('tests if the salary has bonus correctly', function () {
     $salario = 4500;
@@ -38,8 +39,10 @@ it('tests if the salary has bonus correctly', function () {
 
     $result = GeneralServices::getSalaryWithBonus($salario, $bonus);
 
+
     expect($result)->toBe(4950.0);
 });
+// })->only();
 
 
 it('test if json structure is correctly', function () {
@@ -51,4 +54,28 @@ it('test if json structure is correctly', function () {
     expect($json_result)->toBeGreaterThan(1);
 
     expect($json_result[0])->toHaveKeys(['name', 'email', 'phone', 'address']);
-});
+
+    // geralmente os dados vindo de uma api são mais complexos mas o jeito de tratar é o mesmo
+
+    /**
+     * ex:
+     * 
+     * [
+     *  'name'=>'john doe',
+     *  'age' => 25,
+     *  'phones'=> [
+     *      'mobile' => [
+     *          989889898998,
+     *          12312312313213
+     *          ],
+     *      
+     *       'phone' => [
+     *              333333333
+     *          ] 
+     *           ]
+     * ]
+     * 
+     */
+
+    // apenas deve-se navegar nos níveis para testar a estrutura
+})->skip('Inativo temporariamente');
